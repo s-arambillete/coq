@@ -317,11 +317,14 @@ type force_inference = bool (* true = always infer, never turn into evar/subgoal
 
 type implicit_position = Name.t * int * int option
 
+type default_argument = Glob_term.glob_constr option
+
 type implicit_status_info = {
   impl_pos : implicit_position;
   impl_expl : implicit_explanation;
   impl_max : maximal_insertion;
   impl_force : force_inference;
+  impl_default : default_argument;
 }
 
 type implicit_status = implicit_status_info option
@@ -375,6 +378,10 @@ let is_inferable_implicit in_ctx n = function
   | Some { impl_expl = DepFlexAndRigid (_,Conclusion) } -> in_ctx
   | Some { impl_expl = Manual } -> true
 
+let default_argument_of = function
+  | Some { impl_default = Some df } -> Some df
+  | _ -> None
+
 let explicitation = function
   | None -> anomaly (Pp.str "not implicit")
   | Some imp ->
@@ -401,7 +408,8 @@ let rec prepare_implicits i f = function
         impl_pos = pos;
         impl_expl = imp;
         impl_max = set_maximality Silent na i imps' f.maximal;
-        impl_force = true
+        impl_force = true;
+        impl_default = None
       } in
       Some data :: imps'
   | _::imps -> None :: prepare_implicits (i+1) f imps
@@ -418,6 +426,7 @@ let set_manual_implicits silent flags enriching autoimps l =
             impl_expl = Manual;
             impl_max = set_maximality (if silent then Silent else Error) na k imps' max;
             impl_force = true;
+            impl_default = None;
           }
        | ((Anonymous,n1,n2),_), Some (na,max) ->
           Some {
@@ -425,6 +434,7 @@ let set_manual_implicits silent flags enriching autoimps l =
             impl_expl = Manual;
             impl_max = max;
             impl_force = true;
+            impl_default = None;
           }
        | ((na,_,_ as pos),Some exp), None when enriching ->
           Some {
@@ -432,6 +442,7 @@ let set_manual_implicits silent flags enriching autoimps l =
             impl_expl = exp;
             impl_max = set_maximality (if silent then Silent else Info) na k imps' flags.maximal;
             impl_force = true;
+            impl_default = None;
           }
        | (pos,_), None -> None
        end :: imps'
@@ -573,9 +584,9 @@ let impls_of_context vars =
     let impl_pos = (Name id, n, None) in
     match Id.Map.get id !sec_implicits with
     | NonMaxImplicit ->
-      Some { impl_pos; impl_expl = Manual; impl_max = false; impl_force = true }
+      Some { impl_pos; impl_expl = Manual; impl_max = false; impl_force = true; impl_default = None }
     | MaxImplicit ->
-      Some { impl_pos; impl_expl = Manual; impl_max = true; impl_force = true }
+      Some { impl_pos; impl_expl = Manual; impl_max = true; impl_force = true; impl_default = None }
     | Explicit -> None
   in
   List.map_i map 1 vars
@@ -745,16 +756,17 @@ let set_name (na',x,y as pos) = function
 
 let compute_implicit_statuses autoimps l =
   let rec aux i = function
-    | _ :: autoimps, (_, Explicit) :: manualimps -> None :: aux (i+1) (autoimps, manualimps)
-    | pos :: autoimps, (na, MaxImplicit) :: manualimps ->
+    | _ :: autoimps, (_, Explicit, _) :: manualimps -> None :: aux (i+1) (autoimps, manualimps)
+    | pos :: autoimps, (na, MaxImplicit, df) :: manualimps ->
       let imp = {
         impl_pos = set_name pos na;
         impl_expl = Manual;
         impl_max = true;
         impl_force = true;
+        impl_default = df;
       } in
       Some imp :: aux (i+1) (autoimps, manualimps)
-    | pos :: autoimps, (na, NonMaxImplicit) :: manualimps ->
+    | pos :: autoimps, (na, NonMaxImplicit, df) :: manualimps ->
       let imps' = aux (i+1) (autoimps, manualimps) in
       let max = set_maximality Error na i imps' false in
       let imp = {
@@ -762,6 +774,7 @@ let compute_implicit_statuses autoimps l =
         impl_expl = Manual;
         impl_max = max;
         impl_force = true;
+        impl_default = df;
       } in
       Some imp :: imps'
     | autoimps, [] -> List.map (fun _ -> None) autoimps
@@ -783,7 +796,7 @@ let set_implicits local ref l =
        check_rigidity (is_rigid env sigma t);
        (* Sort by number of implicits, decreasing *)
        let is_implicit = function
-         | _, Explicit -> false
+         | _, Explicit, _ -> false
          | _ -> true in
        let l = List.map (fun imps -> (imps,List.count is_implicit imps)) l in
        let l = List.sort (fun (_,n1) (_,n2) -> n2 - n1) l in

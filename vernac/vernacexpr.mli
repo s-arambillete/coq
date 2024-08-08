@@ -318,6 +318,7 @@ type vernac_one_argument_status = {
   recarg_like : bool;
   notation_scope : scope_delimiter CAst.t list;
   implicit_status : Glob_term.binding_kind;
+  default : Constrexpr.constr_expr option;
 }
 
 type vernac_argument_status =

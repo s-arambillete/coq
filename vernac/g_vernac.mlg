@@ -932,7 +932,7 @@ GRAMMAR EXTEND Gram
       { let name, recarg_like, notation_scope = item in
       [RealArg { name=name; recarg_like=recarg_like;
              notation_scope=notation_scope;
-             implicit_status = Explicit}] }
+             implicit_status = Explicit; default = None}] }
     | "/" -> { [VolatileArg] }
     | "&" -> { [BidiArg] }
     | "("; items = LIST1 argument_spec; ")"; scl = LIST0 scope_delimiter ->
@@ -940,19 +940,21 @@ GRAMMAR EXTEND Gram
        List.map (fun (name,recarg_like,notation_scope) ->
            RealArg { name=name; recarg_like=recarg_like;
                  notation_scope = notation_scope @ scl;
-                 implicit_status = Explicit}) items }
-    | "["; items = LIST1 argument_spec; "]"; scl = LIST0 scope_delimiter ->
+                 implicit_status = Explicit; default = None}) items }
+    | "["; items = LIST1 argument_spec; df = OPT default_argument; "]";
+      scl = LIST0 scope_delimiter ->
        { let scl = List.map (CAst.make ~loc) scl in
        List.map (fun (name,recarg_like,notation_scope) ->
            RealArg { name=name; recarg_like=recarg_like;
                  notation_scope = notation_scope @ scl;
-                 implicit_status = NonMaxImplicit}) items }
-    | "{"; items = LIST1 argument_spec; "}"; scl = LIST0 scope_delimiter ->
+                 implicit_status = NonMaxImplicit; default = df}) items }
+    | "{"; items = LIST1 argument_spec; df = OPT default_argument; "}";
+      scl = LIST0 scope_delimiter ->
        { let scl = List.map (CAst.make ~loc) scl in
        List.map (fun (name,recarg_like,notation_scope) ->
            RealArg { name=name; recarg_like=recarg_like;
                  notation_scope = notation_scope @ scl;
-                 implicit_status = MaxImplicit}) items }
+                 implicit_status = MaxImplicit; default = df}) items }
     ]
   ];
   (* Same as [arg_specs], but with only implicit status and names *)
@@ -964,6 +966,8 @@ GRAMMAR EXTEND Gram
        { List.map (fun name -> (name.CAst.v, MaxImplicit)) items }
     ]
   ];
+  default_argument:
+    [ [ "as"; c = lconstr -> { c } ] ];
   instance_name:
     [ [ name = ident_decl; bl = binders ->
           { (CAst.map (fun id -> Name id) (fst name), snd name), bl }

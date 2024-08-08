@@ -225,12 +225,18 @@ let vernac_arguments ~section_local reference args more_implicits flags =
   end;
 
   let implicits =
-    List.map (fun { name; implicit_status = i } -> (name,i)) args
+    List.map (fun { name; implicit_status = i; default = df } ->
+      let df = Option.map
+        (Constrintern.intern_gen Pretyping.WithoutTypeConstraint env sigma) df
+      in (name,i,df)) args
+  in
+  let more_implicits =
+    List.map (List.map (fun (na,i) -> (na,i,None))) more_implicits
   in
   let implicits = implicits :: more_implicits in
 
   let implicits_specified = match implicits with
-    | [l] -> List.exists (function _, Glob_term.Explicit -> false | _ -> true) l
+    | [l] -> List.exists (function _, Glob_term.Explicit, _ -> false | _ -> true) l
     | _ -> true in
 
   if implicits_specified && clear_implicits_flag then

@@ -359,6 +359,7 @@ let dummy = {
    name = Anonymous;
    recarg_like = false;
    notation_scope = [];
+   default = None;
  }
 
 let is_dummy = function
@@ -383,7 +384,7 @@ let rec main_implicits i renames recargs scopes impls =
       | scope :: _ -> List.map (fun s -> CAst.make (Constrexpr.DelimUnboundedScope, s)) scope
       | [] -> []
     in
-    let status = {Vernacexpr.implicit_status; name; recarg_like; notation_scope} in
+    let status = {Vernacexpr.implicit_status; name; recarg_like; notation_scope; default=None} in
     let tl = function [] -> [] | _::tl -> tl in
     (* recargs is special -> tl handled above *)
     let rest = main_implicits (i+1) (tl renames) recargs (tl scopes) (tl impls) in

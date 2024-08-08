@@ -368,7 +368,8 @@ let build_impls ?loc n bk na acc =
       impl_pos = (na, n, (*TODO, enhancement: compute dependency*) None);
       impl_expl = Manual;
       impl_max = max;
-      impl_force = true
+      impl_force = true;
+      impl_default = None
     }
   in
   match bk with
@@ -2606,8 +2607,10 @@ let internalize globalenv env pattern_mode (_, ntnvars as lvar) c =
             (* Less regular arguments than expected: complete *)
             (* with implicit arguments if maximal insertion is set *)
             []
-          else
-            set_hole_implicit n (get_implicit_name n allimps) imp head :: aux (n+1) imps' subscopes' eargs rargs
+          else (match default_argument_of imp with
+            | Some df -> df :: aux (n+1) imps' subscopes' eargs rargs
+            | None -> set_hole_implicit n (get_implicit_name n allimps) imp head :: aux (n+1) imps' subscopes' eargs rargs
+            )
           end
       | (imp::impl', a::rargs') ->
           intern_no_implicit enva a :: aux (n+1) impl' subscopes' eargs rargs'

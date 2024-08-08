@@ -70,11 +70,14 @@ type force_inference = bool (** true = always infer, never turn into evar/subgoa
 
 type implicit_position = Name.t * int * int option
 
+type default_argument = Glob_term.glob_constr option
+
 type implicit_status_info = {
   impl_pos : implicit_position;
   impl_expl : implicit_explanation;
   impl_max : maximal_insertion;
   impl_force : force_inference;
+  impl_default : default_argument;
 }
 
 type implicit_status = implicit_status_info option
@@ -92,6 +95,7 @@ val match_implicit : implicit_status -> Constrexpr.explicitation -> bool
 val maximal_insertion_of : implicit_status -> bool
 val force_inference_of : implicit_status -> bool
 val is_nondep_implicit : int -> implicit_status list -> bool
+val default_argument_of : implicit_status -> Glob_term.glob_constr option
 val explicitation : implicit_status -> Constrexpr.explicitation
 
 val positions_of_implicits : implicits_list -> int list
@@ -128,7 +132,8 @@ val maybe_declare_manual_implicits : bool -> GlobRef.t -> ?enriching:bool ->
 (** [set_implicits local ref l]
    Manual declaration of implicit arguments.
   [l] is a list of possible sequences of implicit statuses. *)
-val set_implicits : bool -> GlobRef.t -> (Name.t * Glob_term.binding_kind) list list -> unit
+val set_implicits :
+  bool -> GlobRef.t -> (Name.t * Glob_term.binding_kind * Glob_term.glob_constr option) list list -> unit
 
 val implicits_of_global : GlobRef.t -> implicits_list list
 
