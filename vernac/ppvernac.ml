@@ -1119,7 +1119,7 @@ let pr_synpure_vernac_expr v =
         in
         let rec print_implicits = function
           | [] -> mt ()
-          | (name, impl) :: rest ->
+          | (name, impl, _) :: rest ->
             spc() ++ pr_br impl false (Name.print name) ++ print_implicits rest
         in
         print_arguments args ++

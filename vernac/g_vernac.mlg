@@ -959,11 +959,11 @@ GRAMMAR EXTEND Gram
   ];
   (* Same as [arg_specs], but with only implicit status and names *)
   implicits_alt: [
-    [ name = name -> { [(name.CAst.v, Explicit)] }
-    | "["; items = LIST1 name; "]" ->
-       { List.map (fun name -> (name.CAst.v, NonMaxImplicit)) items }
-    | "{"; items = LIST1 name; "}" ->
-       { List.map (fun name -> (name.CAst.v, MaxImplicit)) items }
+    [ name = name -> { [(name.CAst.v, Explicit, None)] }
+    | "["; items = LIST1 name; df = OPT default_argument; "]" ->
+       { List.map (fun name -> (name.CAst.v, NonMaxImplicit, df)) items }
+    | "{"; items = LIST1 name; df = OPT default_argument; "}" ->
+       { List.map (fun name -> (name.CAst.v, MaxImplicit, df)) items }
     ]
   ];
   default_argument:

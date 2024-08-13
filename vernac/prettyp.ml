@@ -352,7 +352,7 @@ let implicit_kind_of_status = function
 
 let extra_implicit_kind_of_status imp =
   let _,imp = implicit_kind_of_status imp in
-  (Anonymous, imp)
+  (Anonymous, imp, None)
 
 let dummy = {
   Vernacexpr.implicit_status = Glob_term.Explicit;

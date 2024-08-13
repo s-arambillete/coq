@@ -471,7 +471,7 @@ type nonrec synpure_vernac_expr =
   | VernacArguments of
       qualid or_by_notation *
       vernac_argument_status list (* Main arguments status list *) *
-      (Name.t * Glob_term.binding_kind) list list (* Extra implicit status lists *) *
+      (Name.t * Glob_term.binding_kind * constr_expr option) list list (* Extra implicit status lists *) *
       arguments_modifier list
   | VernacReserve of simple_binder list
   | VernacGeneralizable of (lident list) option

@@ -167,7 +167,7 @@ let vernac_arguments ~section_local reference args more_implicits flags =
     CErrors.user_err Pp.(str "The \"clear scopes\" flag is incompatible with scope annotations.");
 
   let names = List.map (fun { name } -> name) args in
-  let names = names :: List.map (List.map fst) more_implicits in
+  let names = names :: List.map (List.map pi1) more_implicits in
 
   let rename_flag_required = ref false in
   let example_renaming = ref None in
@@ -224,14 +224,16 @@ let vernac_arguments ~section_local reference args more_implicits flags =
     in CErrors.user_err msg
   end;
 
+  let intern_default = Option.map
+      (Constrintern.intern_gen Pretyping.WithoutTypeConstraint env sigma)
+  in
   let implicits =
     List.map (fun { name; implicit_status = i; default = df } ->
-      let df = Option.map
-        (Constrintern.intern_gen Pretyping.WithoutTypeConstraint env sigma) df
-      in (name,i,df)) args
+      (name,i,intern_default df)) args
   in
   let more_implicits =
-    List.map (List.map (fun (na,i) -> (na,i,None))) more_implicits
+    List.map
+      (List.map (fun (na,i,df) -> (na,i,intern_default df))) more_implicits
   in
   let implicits = implicits :: more_implicits in
 
