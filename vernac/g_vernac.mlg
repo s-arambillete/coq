@@ -941,47 +941,33 @@ GRAMMAR EXTEND Gram
            RealArg { name=name; recarg_like=recarg_like;
                  notation_scope = notation_scope @ scl;
                  implicit_status = Explicit; default = None}) items }
-    | "["; items = LIST1 argument_spec; "]"; scl = LIST0 scope_delimiter ->
-       { let scl = List.map (CAst.make ~loc) scl in
-       List.map (fun (name,recarg_like,notation_scope) ->
-           RealArg { name=name; recarg_like=recarg_like;
-                 notation_scope = notation_scope @ scl;
-                 implicit_status = NonMaxImplicit; default = None}) items }
-    | "{"; items = LIST1 argument_spec; "}"; scl = LIST0 scope_delimiter ->
-       { let scl = List.map (CAst.make ~loc) scl in
-       List.map (fun (name,recarg_like,notation_scope) ->
-           RealArg { name=name; recarg_like=recarg_like;
-                 notation_scope = notation_scope @ scl;
-                 implicit_status = MaxImplicit; default = None}) items }
-    | "?["; items = LIST1 argument_spec; ":="; df = lconstr; "]";
-       scl = LIST0 scope_delimiter ->
-       { let scl = List.map (CAst.make ~loc) scl in
-       List.map (fun (name,recarg_like,notation_scope) ->
-           RealArg { name=name; recarg_like=recarg_like;
-                 notation_scope = notation_scope @ scl;
-                 implicit_status = NonMaxImplicit; default = Some df}) items }
-    | "?{"; items = LIST1 argument_spec; ":="; df = lconstr; "}";
+    | "["; items = LIST1 argument_spec; df = OPT default_argument; "]";
       scl = LIST0 scope_delimiter ->
        { let scl = List.map (CAst.make ~loc) scl in
        List.map (fun (name,recarg_like,notation_scope) ->
            RealArg { name=name; recarg_like=recarg_like;
                  notation_scope = notation_scope @ scl;
-                 implicit_status = MaxImplicit; default = Some df}) items }
+                 implicit_status = NonMaxImplicit; default = df}) items }
+    | "{"; items = LIST1 argument_spec; df = OPT default_argument; "}";
+      scl = LIST0 scope_delimiter ->
+       { let scl = List.map (CAst.make ~loc) scl in
+       List.map (fun (name,recarg_like,notation_scope) ->
+           RealArg { name=name; recarg_like=recarg_like;
+                 notation_scope = notation_scope @ scl;
+                 implicit_status = MaxImplicit; default = df}) items }
     ]
   ];
   (* Same as [arg_specs], but with only implicit status and names *)
   implicits_alt: [
     [ name = name -> { [(name.CAst.v, Explicit, None)] }
-    | "["; items = LIST1 name; "]" ->
-       { List.map (fun name -> (name.CAst.v, NonMaxImplicit, None)) items }
-    | "{"; items = LIST1 name; "}" ->
-       { List.map (fun name -> (name.CAst.v, MaxImplicit, None)) items }
-    | "?["; items = LIST1 name; ":="; df = lconstr; "]" ->
-       { List.map (fun name -> (name.CAst.v, NonMaxImplicit, Some df)) items }
-    | "?{"; items = LIST1 name; ":="; df = lconstr; "}" ->
-       { List.map (fun name -> (name.CAst.v, MaxImplicit, Some df)) items }
+    | "["; items = LIST1 name; df = OPT default_argument; "]" ->
+       { List.map (fun name -> (name.CAst.v, NonMaxImplicit, df)) items }
+    | "{"; items = LIST1 name; df = OPT default_argument; "}" ->
+       { List.map (fun name -> (name.CAst.v, MaxImplicit, df)) items }
     ]
   ];
+  default_argument:
+    [ [ ":="; c = lconstr -> { c } ] ];
   instance_name:
     [ [ name = ident_decl; bl = binders ->
           { (CAst.map (fun id -> Name id) (fst name), snd name), bl }
