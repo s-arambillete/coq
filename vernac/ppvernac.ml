@@ -1083,16 +1083,17 @@ let pr_synpure_vernac_expr v =
         let pr_s = prlist (fun {v=s} -> pr_scope_delimiter s) in
         let pr_if b x = if b then x else str "" in
         let pr_one_arg (x,k) = pr_if k (str"!") ++ Name.print x in
-        let pr_br imp force x =
+        let pr_br imp df force x =
           let left,right =
             match imp with
             | Glob_term.NonMaxImplicit -> str "[", str "]"
             | Glob_term.MaxImplicit -> str "{", str "}"
             | Glob_term.Explicit -> if force then str"(",str")" else mt(),mt()
           in
-          left ++ x ++ right
+          left ++ x ++
+          pr_opt (fun c -> str ":=" ++ spc() ++ pr_constr_expr c) df ++ right
         in
-        let get_arguments_like s imp tl =
+        let get_arguments_like s imp df tl =
           if s = [] && imp = Glob_term.Explicit then [], tl
           else
             let rec fold extra = function
@@ -1100,7 +1101,8 @@ let pr_synpure_vernac_expr v =
                   List.equal
                     (fun a b -> let da, a = a.CAst.v in let db, b = b.CAst.v in
                      da = db && String.equal a b) arg.notation_scope s
-                  && arg.implicit_status = imp ->
+                  && arg.implicit_status = imp
+                  && Option.equal Constrexpr_ops.constr_expr_eq arg.default df ->
                 fold ((arg.name,arg.recarg_like) :: extra) tl
               | args -> List.rev extra, args
             in
@@ -1112,15 +1114,16 @@ let pr_synpure_vernac_expr v =
           | BidiArg :: l -> spc () ++ str"&" ++ print_arguments l
           | RealArg { name = id; recarg_like = k;
                       notation_scope = s;
-                      implicit_status = imp } :: tl ->
-            let extra, tl = get_arguments_like s imp tl in
-            spc() ++ hov 1 (pr_br imp (extra<>[]) (prlist_with_sep spc pr_one_arg ((id,k)::extra)) ++
+                      implicit_status = imp;
+                      default = df } :: tl ->
+            let extra, tl = get_arguments_like s imp df tl in
+            spc() ++ hov 1 (pr_br imp df (extra<>[]) (prlist_with_sep spc pr_one_arg ((id,k)::extra)) ++
             pr_s s) ++ print_arguments tl
         in
         let rec print_implicits = function
           | [] -> mt ()
-          | (name, impl, _) :: rest ->
-            spc() ++ pr_br impl false (Name.print name) ++ print_implicits rest
+          | (name, impl, df) :: rest ->
+            spc() ++ pr_br impl df false (Name.print name) ++ print_implicits rest
         in
         print_arguments args ++
         if not (List.is_empty more_implicits) then

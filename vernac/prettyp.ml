@@ -346,13 +346,14 @@ let needs_extra_scopes env ref scopes =
   let ty, _ctx = Typeops.type_of_global_in_context env ref in
   aux env ty scopes
 
-let implicit_kind_of_status = function
-  | None -> Anonymous, Glob_term.Explicit
-  | Some imp -> pi1 imp.impl_pos, if imp.impl_max then Glob_term.MaxImplicit else Glob_term.NonMaxImplicit
+let implicit_kind_of_status env = function
+  | None -> Anonymous, Glob_term.Explicit, None
+  | Some imp -> pi1 imp.impl_pos, (if imp.impl_max then Glob_term.MaxImplicit else Glob_term.NonMaxImplicit),
+                Option.map Constrextern.(extern_glob_constr (extern_env env (Evd.from_env env))) imp.impl_default
 
-let extra_implicit_kind_of_status imp =
-  let _,imp = implicit_kind_of_status imp in
-  (Anonymous, imp, None)
+let extra_implicit_kind_of_status env imp =
+  let _,imp,df = implicit_kind_of_status env imp in
+  (Anonymous, imp, df)
 
 let dummy = {
   Vernacexpr.implicit_status = Glob_term.Explicit;
@@ -363,31 +364,31 @@ let dummy = {
  }
 
 let is_dummy = function
-  | Vernacexpr.(RealArg {implicit_status; name; recarg_like; notation_scope}) ->
-    name = Anonymous && not recarg_like && notation_scope = [] && implicit_status = Glob_term.Explicit
+  | Vernacexpr.(RealArg {implicit_status; name; recarg_like; notation_scope; default}) ->
+    name = Anonymous && not recarg_like && notation_scope = [] && implicit_status = Glob_term.Explicit && default = None
   | _ -> false
 
-let rec main_implicits i renames recargs scopes impls =
+let rec main_implicits i env renames recargs scopes impls =
   if renames = [] && recargs = [] && scopes = [] && impls = [] then []
   else
     let recarg_like, recargs = match recargs with
       | j :: recargs when i = j -> true, recargs
       | _ -> false, recargs
     in
-    let (name, implicit_status) =
+    let (name, implicit_status, default_argument) =
       match renames, impls with
-      | _, (Some _ as i) :: _ -> implicit_kind_of_status i
-      | name::_, _ -> (name,Glob_term.Explicit)
-      | [], (None::_ | []) -> (Anonymous, Glob_term.Explicit)
+      | _, (Some _ as i) :: _ -> implicit_kind_of_status env i
+      | name::_, _ -> (name,Glob_term.Explicit,None)
+      | [], (None::_ | []) -> (Anonymous, Glob_term.Explicit,None)
     in
     let notation_scope = match scopes with
       | scope :: _ -> List.map (fun s -> CAst.make (Constrexpr.DelimUnboundedScope, s)) scope
       | [] -> []
     in
-    let status = {Vernacexpr.implicit_status; name; recarg_like; notation_scope; default=None} in
+    let status = {Vernacexpr.implicit_status; name; recarg_like; notation_scope; default=default_argument} in
     let tl = function [] -> [] | _::tl -> tl in
     (* recargs is special -> tl handled above *)
-    let rest = main_implicits (i+1) (tl renames) recargs (tl scopes) (tl impls) in
+    let rest = main_implicits (i+1) env (tl renames) recargs (tl scopes) (tl impls) in
     status :: rest
 
 let rec insert_fake_args volatile bidi impls =
@@ -429,8 +430,8 @@ let print_arguments env ref =
     | (_, impls) :: rest -> impls, rest
     | [] -> assert false
   in
-  let impls = main_implicits 0 names recargs scopes impls in
-  let moreimpls = List.map (fun (_,i) -> List.map extra_implicit_kind_of_status i) moreimpls in
+  let impls = main_implicits 0 env names recargs scopes impls in
+  let moreimpls = List.map (fun (_,i) -> List.map (extra_implicit_kind_of_status env) i) moreimpls in
   let bidi = Pretyping.get_bidirectionality_hint ref in
   let impls = insert_fake_args nargs_for_red bidi impls in
   if List.for_all is_dummy impls && moreimpls = [] && flags = [] then []
