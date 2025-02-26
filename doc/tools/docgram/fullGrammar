@@ -1333,14 +1333,18 @@ arg_specs: [
 | "/"
 | "&"
 | "(" LIST1 argument_spec ")" LIST0 scope_delimiter
-| "[" LIST1 argument_spec "]" LIST0 scope_delimiter
-| "{" LIST1 argument_spec "}" LIST0 scope_delimiter
+| "[" LIST1 argument_spec OPT default_argument "]" LIST0 scope_delimiter
+| "{" LIST1 argument_spec OPT default_argument "}" LIST0 scope_delimiter
 ]
 
 implicits_alt: [
 | name
-| "[" LIST1 name "]"
-| "{" LIST1 name "}"
+| "[" LIST1 name OPT default_argument "]"
+| "{" LIST1 name OPT default_argument "}"
+]
+
+default_argument: [
+| ":=" lconstr
 ]
 
 instance_name: [

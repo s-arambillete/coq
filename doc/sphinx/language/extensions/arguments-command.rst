@@ -12,12 +12,12 @@ Setting properties of a function's arguments
       | /
       | &
       | ( {+ @argument_spec } ) {* {| % @scope | %_ @scope } }
-      | [ {+ @argument_spec } ] {* {| % @scope | %_ @scope } }
-      | %{ {+ @argument_spec } %} {* {| % @scope | %_ @scope } }
+      | [ {+ @argument_spec } {? := @term } ] {* {| % @scope | %_ @scope } }
+      | %{ {+ @argument_spec } {? := @term } %} {* {| % @scope | %_ @scope } }
       argument_spec ::= {? ! } @name {* {| % @scope | %_ @scope } }
       implicits_alt ::= @name
-      | [ {+ @name } ]
-      | %{ {+ @name } %}
+      | [ {+ @name } {? := @term } ]
+      | %{ {+ @name } {? := @term } %}
       args_modifier ::= simpl nomatch
       | simpl never
       | clear simpl
@@ -79,6 +79,12 @@ Setting properties of a function's arguments
          declares the enclosed names as implicit, maximally inserted.
          :n:`%{@name__1 @name__2 ... %}{* %_@scope }` is equivalent to
          :n:`%{@name__1%}{* %_@scope } %{@name__2%}{* %_@scope } ...`
+
+      :n:`{? := @term }`
+         makes it so that :n:`@term` is used as a default argument
+         instead of inferred from context. This can be used, e.g., to
+         infer an argument with a tactic by giving a term of the form
+         `ltac:(tactic)` or `ltac2:(tactic)`.
 
       `!`
          the function will be unfolded only if all the arguments marked with `!`
@@ -207,6 +213,21 @@ Manual declaration of implicit arguments
       Arguments map [A B] f l, [A] B f l, A B f l.
 
       Check (fun l => map length l = map (list nat) nat length l).
+
+.. example:: Inferring an implicit argument with a tactic
+
+   .. coqtop:: all
+
+      Require Import Arith.
+      From Ltac2 Require Import Ltac2.
+
+      Axiom div : nat -> forall n, n <> 0 -> nat.
+
+      Arguments div _ _ {_ := ltac2:(orelse (fun () => apply Nat.neq_succ_0) (fun _ => Message.print (Message.of_string "Cannot find a proof that the divisor is non-zero")))}.
+
+      Check div 3 2.
+
+      Fail Check div 3 0.
 
 .. _auto_decl_implicit_args:
 
